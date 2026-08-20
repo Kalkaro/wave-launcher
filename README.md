@@ -17,26 +17,13 @@ wave-launcher
 
 ## Colors
 
-Wave Launcher reads its colors from environment variables when its Quickshell
-daemon starts:
+Wave Launcher reads declarative settings from
+`$XDG_CONFIG_HOME/wave-launcher/config.json` (normally
+`~/.config/wave-launcher/config.json`). The file is watched for changes, so an
+already-running launcher reloads updated colors and behavior automatically.
 
-| Variable | Purpose | Default |
-| --- | --- | --- |
-| `WAVE_LAUNCHER_BG` | Center-vignette background | `#100e1c` |
-| `WAVE_LAUNCHER_FG` | Primary text | `#f4ebfc` |
-| `WAVE_LAUNCHER_ACCENT` | Text shadows | `#c084fc` |
-
-For example:
-
-```sh
-WAVE_LAUNCHER_BG='#140811' \
-WAVE_LAUNCHER_FG='#e1ccc9' \
-WAVE_LAUNCHER_ACCENT='#140811' \
-wave-launcher
-```
-
-Changing these variables does not update an already-running daemon. Restart
-Wave Launcher after changing them so the new colors are inherited.
+The Home Manager module generates this file from the options below. The NixOS
+module generates the same file at `/etc/xdg/wave-launcher/config.json`.
 
 The included NixOS and Home Manager modules expose font, animation, and custom
 color options. The font defaults to BigBlueTermPlus Nerd Font, and both text
@@ -48,6 +35,7 @@ programs.wave-launcher = {
   font = "BigBlueTermPlus Nerd Font";
   wave.enable = true;
   scramble.enable = true;
+  background.enable = true;
   maxCharacters = 25;
 
   colors = {
@@ -58,10 +46,22 @@ programs.wave-launcher = {
 };
 ```
 
-Set `wave.enable = false` for flat text or `scramble.enable = false` to show
-application names immediately without randomized characters. To source colors
-from Stylix instead, set `stylix.enable = true`; this maps Stylix `base05` to the
-primary text and `base00` to both the background and text shadows.
+Without a Nix module, the equivalent color configuration is:
+
+```json
+{
+  "background": "#140811",
+  "foreground": "#e1ccc9",
+  "accent": "#140811"
+}
+```
+
+Set `wave.enable = false` for flat text, `scramble.enable = false` to show
+application names immediately without randomized characters, or
+`background.enable = false` to hide the blurred rectangle behind the text. To
+source colors from Stylix instead, set `stylix.enable = true`; this maps Stylix
+`base05` to the primary text and `base00` to both the background and text
+shadows.
 
 ## Piped input
 

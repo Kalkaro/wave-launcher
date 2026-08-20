@@ -3,8 +3,8 @@
 let
   inherit (import ./lib.nix lib)
     mkWaveLauncherOptions
+    waveLauncherConfig
     waveLauncherResolvedCfg
-    waveLauncherSessionVariables
     ;
 
   cfg = config.programs.wave-launcher;
@@ -28,7 +28,9 @@ in
     ];
 
     environment.systemPackages = [ cfg.package ];
-    environment.sessionVariables = waveLauncherSessionVariables (waveLauncherResolvedCfg cfg config);
+    environment.etc."xdg/wave-launcher/config.json".text = builtins.toJSON (
+      waveLauncherConfig (waveLauncherResolvedCfg cfg config)
+    );
     fonts.packages = cfg.fontPackages;
   };
 }

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Shapes
+import QtCore
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
@@ -11,19 +12,42 @@ import "rofi-search.js" as RofiSearch
 ShellRoot {
     id: root
 
-    readonly property string bgHex: Quickshell.env("WAVE_LAUNCHER_BG") || "#100e1c"
-    readonly property string fgHex: Quickshell.env("WAVE_LAUNCHER_FG") || "#f4ebfc"
-    readonly property string accentHex: Quickshell.env("WAVE_LAUNCHER_ACCENT") || "#c084fc"
-    readonly property string customNamespace: Quickshell.env("WAVE_LAUNCHER_NAMESPACE")
-                                           || "wave-launcher"
-    readonly property string fontFamily: Quickshell.env("WAVE_LAUNCHER_FONT")
-                                        || "BigBlueTermPlus Nerd Font"
-    readonly property bool waveEnabled: Quickshell.env("WAVE_LAUNCHER_WAVE_ENABLED") !== "false"
-    readonly property bool scrambleEnabled: Quickshell.env("WAVE_LAUNCHER_SCRAMBLE_ENABLED") !== "false"
+    property var launcherConfig: ({})
+    readonly property string configPath: StandardPaths.locate(StandardPaths.GenericConfigLocation, "wave-launcher/config.json")
+
+    function configValue(name, fallback) {
+        const value = launcherConfig[name];
+        return value === undefined || value === null ? fallback : value;
+    }
+
+    function loadConfig() {
+        try {
+            launcherConfig = JSON.parse(configFile.text());
+        } catch (error) {
+            console.warn("wave-launcher: could not parse " + configPath + ": " + error);
+        }
+    }
+
+    readonly property string bgHex: String(configValue("background", "#100e1c"))
+    readonly property string fgHex: String(configValue("foreground", "#f4ebfc"))
+    readonly property string accentHex: String(configValue("accent", "#c084fc"))
+    readonly property string customNamespace: String(configValue("namespace", "wave-launcher"))
+    readonly property string fontFamily: String(configValue("font", "BigBlueTermPlus Nerd Font"))
+    readonly property bool waveEnabled: configValue("waveEnabled", true) === true
+    readonly property bool scrambleEnabled: configValue("scrambleEnabled", true) === true
+    readonly property bool backgroundEnabled: configValue("backgroundEnabled", true) === true
     readonly property int maxCharacters: {
-        const configured = parseInt(Quickshell.env("WAVE_LAUNCHER_MAX_CHARACTERS"), 10);
+        const configured = parseInt(configValue("maxCharacters", 25), 10);
         return isNaN(configured) || configured < 1 ? 25 : configured;
     }
+    readonly property string matchingMethod: String(configValue("matching", "normal"))
+    readonly property bool normalizeMatch: configValue("normalize", false) === true
+    readonly property bool sortMatches: configValue("sort", false) === true
+    readonly property string sortingMethod: String(configValue("sortingMethod", "normal"))
+    readonly property string matchFieldsSpec: String(configValue("matchFields", "name,generic,exec,categories,keywords"))
+    readonly property bool useDrunHistory: configValue("useDrunHistory", true) === true
+    readonly property bool preferNameMatch: configValue("preferNameMatch", true) === true
+    readonly property int displayDebounceMs: Math.max(0, parseInt(configValue("displayDebounceMs", 150), 10) || 0)
 
     function colorWithAlpha(hex, alpha) {
         let value = hex.startsWith("#") ? hex.slice(1) : hex;
@@ -64,7 +88,7 @@ ShellRoot {
         return characters.slice(0, maxCharacters - 1).join("") + "…";
     }
 
-    readonly property bool fallLettersEnabled: Quickshell.env("WAVE_LAUNCHER_FALL") === "1"
+    readonly property bool fallLettersEnabled: configValue("fallLettersEnabled", false) === true
 
     property bool launcherOpen: false
     property bool windowShown: false
@@ -94,10 +118,19 @@ ShellRoot {
     readonly property real smallResultScale: 16 / 44
     readonly property real smallWaveAmplitude: 10 * smallResultScale
 
+    FileView {
+        id: configFile
+        path: root.configPath
+        preload: root.configPath.length > 0
+        watchChanges: true
+        printErrors: false
+        onLoaded: root.loadConfig()
+        onFileChanged: reload()
+    }
+
     readonly property string drunCachePath: {
-        const custom = Quickshell.env("WAVE_LAUNCHER_DRUN_CACHE");
-        const home = Quickshell.env("HOME") || "";
-        const cacheDir = Quickshell.env("XDG_CACHE_HOME") || (home ? home + "/.cache" : "");
+        const custom = String(root.configValue("drunCache", ""));
+        const cacheDir = StandardPaths.writableLocation(StandardPaths.GenericCacheLocation);
         const fileName = custom || "wave-launcher.druncache";
         if (fileName.startsWith("/"))
             return "file://" + fileName;
@@ -342,7 +375,7 @@ ShellRoot {
 
     Timer {
         id: resultsShowDelay
-        interval: Math.max(0, parseInt(Quickshell.env("WAVE_LAUNCHER_DISPLAY_DEBOUNCE_MS") || "150", 10))
+        interval: root.displayDebounceMs
         onTriggered: {
             root.showResults = true;
             updateDisplayAppName();
@@ -404,14 +437,14 @@ ShellRoot {
             return [];
 
         return RofiSearch.search(text, preparedApplications, {
-            matchingMethod: Quickshell.env("WAVE_LAUNCHER_MATCHING") || "normal",
-            normalizeMatch: Quickshell.env("WAVE_LAUNCHER_NORMALIZE") === "true",
-            sort: Quickshell.env("WAVE_LAUNCHER_SORT") === "true",
-            sortingMethod: Quickshell.env("WAVE_LAUNCHER_SORTING") || "normal",
-            matchFieldsSpec: Quickshell.env("WAVE_LAUNCHER_MATCH_FIELDS") || undefined,
+            matchingMethod: root.matchingMethod,
+            normalizeMatch: root.normalizeMatch,
+            sort: root.sortMatches,
+            sortingMethod: root.sortingMethod,
+            matchFieldsSpec: root.matchFieldsSpec,
             drunHistory: root.drunHistory,
-            useDrunHistory: Quickshell.env("WAVE_LAUNCHER_DRUN_HISTORY") !== "false",
-            preferNameMatch: Quickshell.env("WAVE_LAUNCHER_PREFER_NAME_MATCH") !== "false"
+            useDrunHistory: root.useDrunHistory,
+            preferNameMatch: root.preferNameMatch
         });
     }
 
@@ -594,6 +627,7 @@ ShellRoot {
 
             RectangularShadow {
                 id: launcherShadow
+                visible: root.backgroundEnabled
                 anchors.centerIn: parent
                 width: vignette.targetWidth
                 height: vignette.blobHeight
@@ -671,7 +705,7 @@ ShellRoot {
             onClicked: root.close()
         }
 
-        // Optional physics layer (enable with WAVE_LAUNCHER_FALL=1)
+        // Optional physics layer, controlled by fallLettersEnabled in config.json.
         Item {
             id: physicsLayer
             anchors.fill: parent
@@ -1427,12 +1461,7 @@ ShellRoot {
                     target: root
                     function onLauncherOpenChanged() {
                         if (root.launcherOpen) {
-                            quitProgressAnim.stop();
-                            quitScrambleTimer.stop();
-                            appNameContainer.quitAnimating = false;
-                            root.centerQuitAnimating = false;
-                            appNameContainer.quitProgress = 0;
-                            appNameContainer.committedScrambleTarget = "";
+                            appNameContainer.clearScramble();
                             appNameContainer.scheduleScramble(centerMenu.appNameStr);
                         } else if (charScrambleModel.count > 0) {
                             appNameContainer.beginQuitScramble();

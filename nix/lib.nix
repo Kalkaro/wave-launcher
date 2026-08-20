@@ -43,6 +43,12 @@ lib: rec {
         description = "Whether to animate launcher text with a character scramble effect.";
       };
 
+      background.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Whether to show the blurred background rectangle behind launcher text.";
+      };
+
       maxCharacters = lib.mkOption {
         type = lib.types.ints.positive;
         default = 25;
@@ -195,31 +201,31 @@ lib: rec {
     else
       cfg;
 
-  waveLauncherSessionVariables =
+  waveLauncherConfig =
     cfg:
     let
       inherit (cfg) colors search;
-      boolStr = b: if b then "true" else "false";
       base = {
-        WAVE_LAUNCHER_FONT = cfg.font;
-        WAVE_LAUNCHER_WAVE_ENABLED = boolStr cfg.wave.enable;
-        WAVE_LAUNCHER_SCRAMBLE_ENABLED = boolStr cfg.scramble.enable;
-        WAVE_LAUNCHER_MAX_CHARACTERS = builtins.toString cfg.maxCharacters;
-        WAVE_LAUNCHER_NAMESPACE = cfg.namespace;
-        WAVE_LAUNCHER_BG = colors.background;
-        WAVE_LAUNCHER_FG = colors.foreground;
-        WAVE_LAUNCHER_ACCENT = colors.accent;
-        WAVE_LAUNCHER_MATCHING = search.matching;
-        WAVE_LAUNCHER_NORMALIZE = boolStr search.normalize;
-        WAVE_LAUNCHER_SORT = boolStr search.sort;
-        WAVE_LAUNCHER_SORTING = search.sortingMethod;
-        WAVE_LAUNCHER_MATCH_FIELDS = builtins.concatStringsSep "," search.matchFields;
-        WAVE_LAUNCHER_DRUN_HISTORY = boolStr search.useDrunHistory;
-        WAVE_LAUNCHER_PREFER_NAME_MATCH = boolStr search.preferNameMatch;
+        font = cfg.font;
+        waveEnabled = cfg.wave.enable;
+        scrambleEnabled = cfg.scramble.enable;
+        backgroundEnabled = cfg.background.enable;
+        maxCharacters = cfg.maxCharacters;
+        namespace = cfg.namespace;
+        background = colors.background;
+        foreground = colors.foreground;
+        accent = colors.accent;
+        matching = search.matching;
+        normalize = search.normalize;
+        sort = search.sort;
+        sortingMethod = search.sortingMethod;
+        matchFields = builtins.concatStringsSep "," search.matchFields;
+        useDrunHistory = search.useDrunHistory;
+        preferNameMatch = search.preferNameMatch;
       };
     in
     base
     // (if search.drunCache != null then {
-      WAVE_LAUNCHER_DRUN_CACHE = search.drunCache;
+      drunCache = search.drunCache;
     } else { });
 }
