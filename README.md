@@ -8,6 +8,12 @@
 ```sh
 nix run github:Kalkaro/wave-launcher
 ```
+or shell:
+
+```sh
+nix shell github:Kalkaro/wave-launcher
+wave-launcher [--fall]
+```
 
 From a checkout:
 
