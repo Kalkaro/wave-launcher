@@ -546,11 +546,16 @@ ShellRoot {
         WlrLayershell.keyboardFocus: root.launcherOpen
                                      ? WlrKeyboardFocus.Exclusive
                                      : WlrKeyboardFocus.None
+        mask: root.launcherOpen ? null : clickThroughMask
         anchors {
             top: true
             bottom: true
             left: true
             right: true
+        }
+
+        Region {
+            id: clickThroughMask
         }
 
         ShortcutInhibitor {
