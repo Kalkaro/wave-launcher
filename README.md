@@ -12,13 +12,7 @@ or shell:
 
 ```sh
 nix shell github:Kalkaro/wave-launcher
-wave-launcher [--fall]
-```
-
-From a checkout:
-
-```sh
-./launcher.sh
+wave-launcher
 ```
 
 Search logic is ported from [Rofi](https://github.com/davatorium/rofi) (MIT).
