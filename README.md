@@ -15,6 +15,42 @@ nix shell github:Kalkaro/wave-launcher
 wave-launcher
 ```
 
+## Colors
+
+Wave Launcher reads its colors from environment variables when its Quickshell
+daemon starts:
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `HAZE_LAUNCHER_BG` | Center-vignette background | `#100e1c` |
+| `HAZE_LAUNCHER_FG` | Primary text | `#f4ebfc` |
+| `HAZE_LAUNCHER_ACCENT` | Text shadows | `#c084fc` |
+
+For example:
+
+```sh
+HAZE_LAUNCHER_BG='#140811' \
+HAZE_LAUNCHER_FG='#e1ccc9' \
+HAZE_LAUNCHER_ACCENT='#140811' \
+wave-launcher
+```
+
+Changing these variables does not update an already-running daemon. Restart
+Wave Launcher after changing them so the new colors are inherited.
+
+The included NixOS and Home Manager modules can source these colors from
+Stylix automatically:
+
+```nix
+programs.wave-launcher = {
+  enable = true;
+  stylix.enable = true;
+};
+```
+
+This maps Stylix `base05` to the primary text and `base00` to both the
+background and text shadows.
+
 ## Piped input
 
 When stdin is piped in, Wave Launcher works as a dmenu-style selector and writes
