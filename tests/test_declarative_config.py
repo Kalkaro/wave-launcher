@@ -22,7 +22,10 @@ class DeclarativeConfigTests(unittest.TestCase):
         self.assertIn('StandardPaths.locate(StandardPaths.GenericConfigLocation, "wave-launcher/config.json")', shell)
         self.assertIn("watchChanges: true", shell)
         self.assertIn("onFileChanged: reload()", shell)
-        self.assertIn("JSON.parse(configFile.text())", shell)
+        self.assertIn("JSON.parse(text)", shell)
+        self.assertIn("function refreshConfig()", shell)
+        self.assertIn("onTriggered: root.refreshConfig()", shell)
+        self.assertIn("Component.onCompleted: refreshConfig()", shell)
         self.assertNotIn('Quickshell.env("WAVE_LAUNCHER_', shell)
 
         self.assertIn("waveLauncherConfig", nix_lib)

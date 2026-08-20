@@ -13,7 +13,8 @@ ShellRoot {
     id: root
 
     property var launcherConfig: ({})
-    readonly property string configPath: StandardPaths.locate(StandardPaths.GenericConfigLocation, "wave-launcher/config.json")
+    property string configPath: ""
+    property string loadedConfigText: ""
 
     function configValue(name, fallback) {
         const value = launcherConfig[name];
@@ -21,11 +22,30 @@ ShellRoot {
     }
 
     function loadConfig() {
+        const text = configFile.text();
+        if (text === loadedConfigText)
+            return;
+        loadedConfigText = text;
+
         try {
-            launcherConfig = JSON.parse(configFile.text());
+            launcherConfig = JSON.parse(text);
         } catch (error) {
             console.warn("wave-launcher: could not parse " + configPath + ": " + error);
         }
+    }
+
+    function refreshConfig() {
+        const located = StandardPaths.locate(StandardPaths.GenericConfigLocation, "wave-launcher/config.json");
+        if (located !== configPath) {
+            configPath = located;
+            loadedConfigText = "";
+            if (located.length === 0)
+                launcherConfig = ({});
+            return;
+        }
+
+        if (located.length > 0)
+            configFile.reload();
     }
 
     readonly property string bgHex: String(configValue("background", "#100e1c"))
@@ -127,6 +147,15 @@ ShellRoot {
         onLoaded: root.loadConfig()
         onFileChanged: reload()
     }
+
+    Timer {
+        interval: 500
+        running: true
+        repeat: true
+        onTriggered: root.refreshConfig()
+    }
+
+    Component.onCompleted: refreshConfig()
 
     readonly property string drunCachePath: {
         const custom = String(root.configValue("drunCache", ""));
