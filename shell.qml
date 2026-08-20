@@ -39,6 +39,24 @@ ShellRoot {
         return 60 + (optionIndex - 1) * 30;
     }
 
+    function entryDisplayName(entry) {
+        if (!entry)
+            return "";
+        return entry.displayName !== undefined ? entry.displayName : (entry.name || "");
+    }
+
+    function externalDisplayColumn(line) {
+        const columns = String(line).split("\t");
+        return columns.length > 1 ? columns[1] : columns[0];
+    }
+
+    function truncateDisplayText(text, maxCharacters) {
+        const characters = Array.from(String(text));
+        if (characters.length <= maxCharacters)
+            return characters.join("");
+        return characters.slice(0, maxCharacters - 1).join("") + "…";
+    }
+
     readonly property bool fallLettersEnabled: Quickshell.env("WAVE_LAUNCHER_FALL") === "1"
 
     property bool launcherOpen: false
@@ -155,10 +173,8 @@ ShellRoot {
 
     readonly property var preparedApplications: applications.map(entry => RofiSearch.prepareApplication(entry))
 
-    readonly property var preparedExternalMenuEntries:
-        externalMenuEntries.map(entry => RofiSearch.prepareApplication(entry))
     readonly property var results: externalMenuMode
-        ? searchExternalMenu(query)
+        ? externalMenuEntries
         : searchApplications(query)
     readonly property var topResult: results.length > 0
         ? (results[Math.min(selectedIndex, results.length - 1)] || results[0])
@@ -210,7 +226,7 @@ ShellRoot {
 
         outgoingResultName = displayAppName;
         resultTransitionStartBlurWidth = launcherShadow.width;
-        incomingResultName = incomingEntry.name;
+        incomingResultName = entryDisplayName(incomingEntry);
         pendingSelectedIndex = nextIndex;
         resultTransitionSourceRow = sourceRow;
         resultTransitionDirection = delta;
@@ -238,16 +254,20 @@ ShellRoot {
         if (lines.length > 0 && lines[lines.length - 1] === "")
             lines.pop();
 
-        externalMenuEntries = lines.map((line, index) => ({
-            id: "external-menu-" + index,
-            name: line,
-            value: line,
-            genericName: "",
-            execString: "",
-            categories: [],
-            keywords: [],
-            comment: ""
-        }));
+        externalMenuEntries = lines.map((line, index) => {
+            const displayColumn = externalDisplayColumn(line);
+            return {
+                id: "external-menu-" + index,
+                name: displayColumn,
+                displayName: truncateDisplayText(displayColumn, 15),
+                value: line,
+                genericName: "",
+                execString: "",
+                categories: [],
+                keywords: [],
+                comment: ""
+            };
+        });
 
         if (externalMenuEntries.length === 0) {
             finishExternalMenu("cancelled", "");
@@ -257,7 +277,7 @@ ShellRoot {
         open();
         showResults = true;
         resultsShowDelay.stop();
-        selectedIndex = 0;
+        selectedIndex = externalMenuEntries.length - 1;
         updateDisplayAppName();
     }
 
@@ -285,6 +305,11 @@ ShellRoot {
     }
 
     function updateDisplayAppName() {
+        if (externalMenuMode) {
+            displayAppName = topResult ? entryDisplayName(topResult) : query.trim();
+            return;
+        }
+
         if (query.trim().length === 0) {
             displayAppName = "";
             return;
@@ -294,7 +319,7 @@ ShellRoot {
             return;
         }
         if (topResult)
-            displayAppName = topResult.name;
+            displayAppName = entryDisplayName(topResult);
         else
             displayAppName = query.trim();
     }
@@ -357,20 +382,6 @@ ShellRoot {
             drunHistory: root.drunHistory,
             useDrunHistory: Quickshell.env("WAVE_LAUNCHER_DRUN_HISTORY") !== "false",
             preferNameMatch: Quickshell.env("WAVE_LAUNCHER_PREFER_NAME_MATCH") !== "false"
-        });
-    }
-
-    function searchExternalMenu(text) {
-        if (text.trim().length === 0)
-            return externalMenuEntries;
-
-        return RofiSearch.search(text, preparedExternalMenuEntries, {
-            matchingMethod: Quickshell.env("WAVE_LAUNCHER_MATCHING") || "normal",
-            normalizeMatch: Quickshell.env("WAVE_LAUNCHER_NORMALIZE") === "true",
-            sort: false,
-            matchFieldsSpec: "name",
-            useDrunHistory: false,
-            preferNameMatch: true
         });
     }
 
@@ -570,6 +581,7 @@ ShellRoot {
             anchors.fill: parent
             opacity: 0
             focus: true
+            readOnly: root.externalMenuMode
             text: root.query
 
             onTextEdited: {
@@ -1481,7 +1493,7 @@ ShellRoot {
                         id: optionDelegate
                         required property var modelData
                         required property int index
-                        readonly property string optionName: modelData.name || ""
+                        readonly property string optionName: root.entryDisplayName(modelData)
                         readonly property real centeredWaveIndexOffset:
                             (root.displayAppName.length - optionName.length) / 2
 

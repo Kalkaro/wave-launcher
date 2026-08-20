@@ -24,7 +24,11 @@ the selected line to stdout:
 cliphist list | wave-launcher | cliphist decode | wl-copy
 ```
 
-Press Enter to select an entry or Escape to cancel. Running `wave-launcher`
-without piped input keeps the normal application-launcher behavior.
+Piped menus display the second tab-separated column (like Rofi's
+`-display-columns 2`) with a 15-character limit, while returning the complete
+original line. The final input row is selected initially. Use the arrow keys to
+navigate, Enter to select, or Escape to cancel; text search is disabled in this
+mode. Running `wave-launcher` without piped input keeps the normal application
+launcher behavior.
 
 Search logic is ported from [Rofi](https://github.com/davatorium/rofi) (MIT).
