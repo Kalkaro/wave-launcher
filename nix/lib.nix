@@ -43,6 +43,12 @@ lib: rec {
         description = "Whether to animate launcher text with a character scramble effect.";
       };
 
+      fall.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Whether typed letters fall and interact with launcher surfaces.";
+      };
+
       background.enable = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -209,6 +215,7 @@ lib: rec {
         font = cfg.font;
         waveEnabled = cfg.wave.enable;
         scrambleEnabled = cfg.scramble.enable;
+        fallLettersEnabled = cfg.fall.enable;
         backgroundEnabled = cfg.background.enable;
         maxCharacters = cfg.maxCharacters;
         namespace = cfg.namespace;

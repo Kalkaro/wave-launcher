@@ -108,7 +108,9 @@ ShellRoot {
         return characters.slice(0, maxCharacters - 1).join("") + "…";
     }
 
-    readonly property bool fallLettersEnabled: configValue("fallLettersEnabled", false) === true
+    property bool commandFallEnabled: false
+    readonly property bool fallLettersEnabled: commandFallEnabled
+                                               || configValue("fallLettersEnabled", false) === true
 
     property bool launcherOpen: false
     property bool windowShown: false
@@ -550,8 +552,22 @@ ShellRoot {
     IpcHandler {
         target: "launcher"
 
-        function toggle(): void { root.toggle(); }
-        function open(): void { root.open(); }
+        function toggle(): void {
+            root.commandFallEnabled = false;
+            root.toggle();
+        }
+        function toggleFall(): void {
+            root.commandFallEnabled = true;
+            root.toggle();
+        }
+        function open(): void {
+            root.commandFallEnabled = false;
+            root.open();
+        }
+        function openFall(): void {
+            root.commandFallEnabled = true;
+            root.open();
+        }
         function close(): void { root.close(); }
         function showMenu(inputPath: string, resultPath: string): void {
             root.showExternalMenu(inputPath, resultPath);

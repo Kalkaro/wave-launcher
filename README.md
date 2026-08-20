@@ -15,6 +15,12 @@ nix shell github:Kalkaro/wave-launcher
 wave-launcher
 ```
 
+Pass `--fall` to enable falling-letter physics for that invocation:
+
+```sh
+wave-launcher --fall
+```
+
 ## Colors
 
 Wave Launcher reads declarative settings from
@@ -35,6 +41,7 @@ programs.wave-launcher = {
   font = "BigBlueTermPlus Nerd Font";
   wave.enable = true;
   scramble.enable = true;
+  fall.enable = false;
   background.enable = true;
   maxCharacters = 25;
 
@@ -57,7 +64,8 @@ Without a Nix module, the equivalent color configuration is:
 ```
 
 Set `wave.enable = false` for flat text, `scramble.enable = false` to show
-application names immediately without randomized characters, or
+application names immediately without randomized characters,
+`fall.enable = true` to keep falling-letter physics enabled, or
 `background.enable = false` to hide the blurred rectangle behind the text. To
 source colors from Stylix instead, set `stylix.enable = true`; this maps Stylix
 `base05` to the primary text and `base00` to both the background and text

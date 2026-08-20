@@ -5,6 +5,14 @@ set -eu
 launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 qs_bin=${WAVE_LAUNCHER_QS:-qs}
 
+toggle_method=toggle
+open_method=open
+if [ "${1:-}" = "--fall" ]; then
+    toggle_method=toggleFall
+    open_method=openFall
+    shift
+fi
+
 start_launcher() {
     "$qs_bin" -p "$launcher_dir" --daemonize >/dev/null 2>&1
 }
@@ -66,7 +74,7 @@ if [ -p /dev/stdin ] || [ -f /dev/stdin ]; then
     exit 1
 fi
 
-if "$qs_bin" -p "$launcher_dir" ipc call launcher toggle >/dev/null 2>&1; then
+if "$qs_bin" -p "$launcher_dir" ipc call launcher "$toggle_method" >/dev/null 2>&1; then
     exit 0
 fi
 
@@ -75,7 +83,7 @@ start_launcher
 # Give Quickshell a brief moment to register its IPC endpoint.
 attempt=0
 while [ "$attempt" -lt 50 ]; do
-    if "$qs_bin" -p "$launcher_dir" ipc call launcher open >/dev/null 2>&1; then
+    if "$qs_bin" -p "$launcher_dir" ipc call launcher "$open_method" >/dev/null 2>&1; then
         exit 0
     fi
     attempt=$((attempt + 1))

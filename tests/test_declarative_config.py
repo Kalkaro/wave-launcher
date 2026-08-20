@@ -45,6 +45,14 @@ class DeclarativeConfigTests(unittest.TestCase):
         self.assertIn('configValue("backgroundEnabled", true) === true', shell)
         self.assertIn("visible: root.backgroundEnabled", shell)
 
+    def test_falling_letters_are_declarative_and_disabled_by_default(self) -> None:
+        shell = SHELL_QML.read_text(encoding="utf-8")
+        nix_lib = NIX_LIB.read_text(encoding="utf-8")
+
+        self.assertIn("fall.enable = lib.mkOption", nix_lib)
+        self.assertIn("fallLettersEnabled = cfg.fall.enable;", nix_lib)
+        self.assertIn('configValue("fallLettersEnabled", false) === true', shell)
+
 
 if __name__ == "__main__":
     unittest.main()
