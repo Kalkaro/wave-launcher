@@ -38,15 +38,16 @@ wave-launcher
 Changing these variables does not update an already-running daemon. Restart
 Wave Launcher after changing them so the new colors are inherited.
 
-The included NixOS and Home Manager modules expose font, wave, and custom color
-options. The font defaults to BigBlueTermPlus Nerd Font and the wave effect is
-enabled by default:
+The included NixOS and Home Manager modules expose font, animation, and custom
+color options. The font defaults to BigBlueTermPlus Nerd Font, and both text
+effects are enabled by default:
 
 ```nix
 programs.wave-launcher = {
   enable = true;
   font = "BigBlueTermPlus Nerd Font";
   wave.enable = true;
+  scramble.enable = true;
 
   colors = {
     background = "#140811";
@@ -56,9 +57,10 @@ programs.wave-launcher = {
 };
 ```
 
-Set `wave.enable = false` for flat text. To source colors from Stylix instead,
-set `stylix.enable = true`; this maps Stylix `base05` to the primary text and
-`base00` to both the background and text shadows.
+Set `wave.enable = false` for flat text or `scramble.enable = false` to show
+application names immediately without randomized characters. To source colors
+from Stylix instead, set `stylix.enable = true`; this maps Stylix `base05` to the
+primary text and `base00` to both the background and text shadows.
 
 ## Piped input
 

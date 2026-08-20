@@ -20,6 +20,7 @@ ShellRoot {
     readonly property string fontFamily: Quickshell.env("WAVE_LAUNCHER_FONT")
                                         || "BigBlueTermPlus Nerd Font"
     readonly property bool waveEnabled: Quickshell.env("WAVE_LAUNCHER_WAVE_ENABLED") !== "false"
+    readonly property bool scrambleEnabled: Quickshell.env("WAVE_LAUNCHER_SCRAMBLE_ENABLED") !== "false"
 
     function colorWithAlpha(hex, alpha) {
         let value = hex.startsWith("#") ? hex.slice(1) : hex;
@@ -1100,6 +1101,10 @@ ShellRoot {
                 }
 
                 function scheduleScramble(target) {
+                    if (!root.scrambleEnabled) {
+                        setTextImmediately(target);
+                        return;
+                    }
                     pendingScrambleTarget = target;
                     scrambleScheduleTimer.restart();
                 }
@@ -1166,11 +1171,12 @@ ShellRoot {
                     for (let i = 0; i < charScrambleModel.count; i++) {
                         const slot = charScrambleModel.get(i);
                         charScrambleModel.setProperty(i, "settleAt", now + 999999999);
-                        if (slot.targetChar !== " ")
+                        if (root.scrambleEnabled && slot.targetChar !== " ")
                             charScrambleModel.setProperty(i, "displayChar", randomScrambleChar(slot.targetChar));
                     }
 
-                    quitScrambleTimer.start();
+                    if (root.scrambleEnabled)
+                        quitScrambleTimer.start();
                     quitProgressAnim.duration = quitAnimDurationMs;
                     quitProgressAnim.restart();
                 }
@@ -1422,8 +1428,9 @@ ShellRoot {
                             required property int settleAt
                             required property int index
 
-                            readonly property bool isScrambling: charDelegate.settleAt > appNameContainer.scrambleClock
-                                    || appNameContainer.quitAnimating
+                            readonly property bool isScrambling: root.scrambleEnabled
+                                    && (charDelegate.settleAt > appNameContainer.scrambleClock
+                                        || appNameContainer.quitAnimating)
 
                             readonly property real yOffset: root.waveOffset(
                                 charDelegate.index + appNameContainer.transitionWaveIndexOffset
