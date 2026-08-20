@@ -186,11 +186,11 @@ ShellRoot {
         const options = [];
         const activeIndex = Math.min(selectedIndex, results.length - 1);
         const offsets = [-1, 1, 2, 3];
-        for (let i = 0; i < offsets.length && options.length < 4; i++) {
-            const optionIndex = (activeIndex + offsets[i] + results.length) % results.length;
-            const candidate = results[optionIndex];
-            if (optionIndex !== activeIndex && options.indexOf(candidate) === -1)
-                options.push(candidate);
+        for (let i = 0; i < offsets.length; i++) {
+            const optionIndex = activeIndex + offsets[i];
+            options.push(optionIndex >= 0 && optionIndex < results.length
+                ? results[optionIndex]
+                : null);
         }
         return options;
     }
@@ -202,11 +202,16 @@ ShellRoot {
     }
 
     function switchSelection(delta) {
-        if (resultTransitionRunning || results.length === 0)
+        if (results.length === 0)
             return;
 
-        const nextIndex = (selectedIndex + delta + results.length) % results.length;
-        if (nextIndex === selectedIndex)
+        if (resultTransitionRunning) {
+            resultSwitchAnimation.stop();
+            finishResultTransition();
+        }
+
+        const nextIndex = selectedIndex + delta;
+        if (nextIndex < 0 || nextIndex >= results.length)
             return;
 
         if (!showResults) {
@@ -218,7 +223,8 @@ ShellRoot {
         const options = optionResults;
         let sourceRow = 0;
         for (let i = 0; i < options.length; i++) {
-            if (options[i] === incomingEntry || options[i].id === incomingEntry.id) {
+            if (options[i]
+                    && (options[i] === incomingEntry || options[i].id === incomingEntry.id)) {
                 sourceRow = i;
                 break;
             }
@@ -259,7 +265,7 @@ ShellRoot {
             return {
                 id: "external-menu-" + index,
                 name: displayColumn,
-                displayName: truncateDisplayText(displayColumn, 15),
+                displayName: truncateDisplayText(displayColumn, 25),
                 value: line,
                 genericName: "",
                 execString: "",
@@ -277,7 +283,7 @@ ShellRoot {
         open();
         showResults = true;
         resultsShowDelay.stop();
-        selectedIndex = externalMenuEntries.length - 1;
+        selectedIndex = 0;
         updateDisplayAppName();
     }
 
@@ -609,11 +615,14 @@ ShellRoot {
                     if (root.fallLettersEnabled && hiddenInput.text.length === 0) {
                         physicsLayer.dropLastLetter();
                     }
+                } else if (event.key === Qt.Key_Up
+                           || event.key === Qt.Key_Backtab
+                           || (event.key === Qt.Key_Tab
+                               && (event.modifiers & Qt.ShiftModifier) !== 0)) {
+                    root.switchSelection(-1);
+                    event.accepted = true;
                 } else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) {
                     root.switchSelection(1);
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Up) {
-                    root.switchSelection(-1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     root.launchSelected();
@@ -1477,7 +1486,7 @@ ShellRoot {
                 height: parent.height
                 readonly property real rowHeight: 28
                 opacity: root.launcherOpen && root.showResults ? 1 : 0
-                visible: opacity > 0.001 && root.optionResults.length > 0
+                visible: opacity > 0.001 && root.results.length > 1
 
                 Behavior on opacity {
                     NumberAnimation {
