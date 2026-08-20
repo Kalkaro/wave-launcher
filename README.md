@@ -48,6 +48,7 @@ programs.wave-launcher = {
   font = "BigBlueTermPlus Nerd Font";
   wave.enable = true;
   scramble.enable = true;
+  maxCharacters = 25;
 
   colors = {
     background = "#140811";
@@ -72,7 +73,8 @@ cliphist list | wave-launcher | cliphist decode | wl-copy
 ```
 
 Piped menus display the second tab-separated column (like Rofi's
-`-display-columns 2`) with a 25-character limit, while returning the complete
+`-display-columns 2`) with a limit controlled by the Home Manager and NixOS
+module's `maxCharacters` option (25 by default), while returning the complete
 original line. The first input row is selected initially. Use the arrow keys to
 navigate, Enter to select, or Escape to cancel; text search is disabled in this
 mode. Running `wave-launcher` without piped input keeps the normal application

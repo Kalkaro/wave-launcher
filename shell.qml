@@ -20,6 +20,10 @@ ShellRoot {
                                         || "BigBlueTermPlus Nerd Font"
     readonly property bool waveEnabled: Quickshell.env("WAVE_LAUNCHER_WAVE_ENABLED") !== "false"
     readonly property bool scrambleEnabled: Quickshell.env("WAVE_LAUNCHER_SCRAMBLE_ENABLED") !== "false"
+    readonly property int maxCharacters: {
+        const configured = parseInt(Quickshell.env("WAVE_LAUNCHER_MAX_CHARACTERS"), 10);
+        return isNaN(configured) || configured < 1 ? 25 : configured;
+    }
 
     function colorWithAlpha(hex, alpha) {
         let value = hex.startsWith("#") ? hex.slice(1) : hex;
@@ -268,7 +272,7 @@ ShellRoot {
             return {
                 id: "external-menu-" + index,
                 name: displayColumn,
-                displayName: truncateDisplayText(displayColumn, 25),
+                displayName: truncateDisplayText(displayColumn, root.maxCharacters),
                 value: line,
                 genericName: "",
                 execString: "",

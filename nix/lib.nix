@@ -43,6 +43,13 @@ lib: rec {
         description = "Whether to animate launcher text with a character scramble effect.";
       };
 
+      maxCharacters = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 25;
+        example = 40;
+        description = "Maximum number of characters shown for piped input entries.";
+      };
+
       namespace = lib.mkOption {
         type = lib.types.str;
         default = "wave-launcher";
@@ -197,6 +204,7 @@ lib: rec {
         WAVE_LAUNCHER_FONT = cfg.font;
         WAVE_LAUNCHER_WAVE_ENABLED = boolStr cfg.wave.enable;
         WAVE_LAUNCHER_SCRAMBLE_ENABLED = boolStr cfg.scramble.enable;
+        WAVE_LAUNCHER_MAX_CHARACTERS = builtins.toString cfg.maxCharacters;
         WAVE_LAUNCHER_NAMESPACE = cfg.namespace;
         WAVE_LAUNCHER_BG = colors.background;
         WAVE_LAUNCHER_FG = colors.foreground;
