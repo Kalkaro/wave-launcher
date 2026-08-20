@@ -73,6 +73,7 @@ ShellRoot {
     property string query: ""
     property string displayAppName: ""
     property bool showResults: false
+    property bool showOptionResults: false
     property int selectedIndex: 0
     property int appReloadCounter: 0
     property int drunHistoryReloadCounter: 0
@@ -187,7 +188,7 @@ ShellRoot {
         ? (results[Math.min(selectedIndex, results.length - 1)] || results[0])
         : null
     readonly property var optionResults: {
-        if (!showResults || results.length < 2)
+        if (!showOptionResults || results.length < 2)
             return [];
 
         const options = [];
@@ -289,7 +290,9 @@ ShellRoot {
 
         open();
         showResults = true;
+        showOptionResults = true;
         resultsShowDelay.stop();
+        optionResultsShowDelay.stop();
         selectedIndex = 0;
         updateDisplayAppName();
     }
@@ -346,13 +349,21 @@ ShellRoot {
         }
     }
 
+    Timer {
+        id: optionResultsShowDelay
+        interval: 500
+        onTriggered: root.showOptionResults = true
+    }
+
     onQueryChanged: {
         if (resultTransitionRunning)
             cancelResultTransition();
 
         if (externalMenuMode) {
             showResults = true;
+            showOptionResults = true;
             resultsShowDelay.stop();
+            optionResultsShowDelay.stop();
             selectedIndex = 0;
             updateDisplayAppName();
             return;
@@ -360,15 +371,19 @@ ShellRoot {
 
         if (query.trim().length === 0) {
             resultsShowDelay.stop();
+            optionResultsShowDelay.stop();
             showResults = false;
+            showOptionResults = false;
             displayAppName = "";
             selectedIndex = 0;
             return;
         }
 
         showResults = false;
+        showOptionResults = false;
         displayAppName = query.trim();
         resultsShowDelay.restart();
+        optionResultsShowDelay.restart();
         selectedIndex = 0;
     }
 
@@ -378,7 +393,9 @@ ShellRoot {
         if (selectedIndex === 0)
             return;
         showResults = true;
+        showOptionResults = true;
         resultsShowDelay.stop();
+        optionResultsShowDelay.stop();
         updateDisplayAppName();
     }
 
@@ -406,7 +423,9 @@ ShellRoot {
         query = "";
         displayAppName = "";
         showResults = false;
+        showOptionResults = false;
         resultsShowDelay.stop();
+        optionResultsShowDelay.stop();
         selectedIndex = 0;
         windowShown = true;
         launcherOpen = true;
@@ -504,7 +523,9 @@ ShellRoot {
                 root.query = "";
                 root.displayAppName = "";
                 root.showResults = false;
+                root.showOptionResults = false;
                 resultsShowDelay.stop();
+                optionResultsShowDelay.stop();
                 root.selectedIndex = 0;
                 physicsLayer.resetAllLetters();
                 physicsLayer.fallingOffScreen = false;
@@ -1498,7 +1519,7 @@ ShellRoot {
                 width: Math.max(waveRow.width, 220)
                 height: parent.height
                 readonly property real rowHeight: 28
-                opacity: root.launcherOpen && root.showResults ? 1 : 0
+                opacity: root.launcherOpen && root.showOptionResults ? 1 : 0
                 visible: opacity > 0.001 && root.results.length > 1
 
                 Behavior on opacity {
