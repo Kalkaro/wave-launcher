@@ -28,6 +28,17 @@ ShellRoot {
         return Qt.rgba(r / 255, g / 255, b / 255, alpha);
     }
 
+    function waveOffset(index, amplitude) {
+        return Math.sin(wavePhase + index * 0.45)
+            * (amplitude === undefined ? 10 : amplitude);
+    }
+
+    function optionVerticalOffset(optionIndex) {
+        if (optionIndex === 0)
+            return -60;
+        return 60 + (optionIndex - 1) * 30;
+    }
+
     readonly property bool fallLettersEnabled: Quickshell.env("WAVE_LAUNCHER_FALL") === "1"
 
     property bool launcherOpen: false
@@ -41,6 +52,21 @@ ShellRoot {
     property int appReloadCounter: 0
     property int drunHistoryReloadCounter: 0
     property real wavePhase: 0
+    property bool resultTransitionRunning: false
+    property real resultTransitionProgress: 0
+    property int resultTransitionSourceRow: 0
+    property int resultTransitionDirection: 1
+    property real resultTransitionStartBlurWidth: 120
+    property int pendingSelectedIndex: 0
+    property string outgoingResultName: ""
+    property string incomingResultName: ""
+    property bool externalMenuMode: false
+    property bool externalMenuCompleting: false
+    property string externalMenuInputPath: ""
+    property string externalMenuResultPath: ""
+    property var externalMenuEntries: []
+    readonly property real smallResultScale: 16 / 44
+    readonly property real smallWaveAmplitude: 10 * smallResultScale
 
     readonly property string drunCachePath: {
         const custom = Quickshell.env("WAVE_LAUNCHER_DRUN_CACHE");
@@ -60,6 +86,19 @@ ShellRoot {
             if (loaded)
                 root.drunHistoryReloadCounter++;
         }
+    }
+
+    FileView {
+        id: externalMenuInputFile
+        path: root.externalMenuInputPath
+        preload: root.externalMenuInputPath.length > 0
+        onLoaded: root.loadExternalMenuEntries()
+    }
+
+    FileView {
+        id: externalMenuResultFile
+        path: root.externalMenuResultPath
+        atomicWrites: true
     }
 
     readonly property var drunHistory: {
@@ -88,6 +127,17 @@ ShellRoot {
         running: root.windowShown
     }
 
+    NumberAnimation {
+        id: resultSwitchAnimation
+        target: root
+        property: "resultTransitionProgress"
+        from: 0
+        to: 1
+        duration: 260
+        easing.type: Easing.OutCubic
+        onFinished: root.finishResultTransition()
+    }
+
     Connections {
         target: DesktopEntries
         function onApplicationsChanged() {
@@ -105,10 +155,134 @@ ShellRoot {
 
     readonly property var preparedApplications: applications.map(entry => RofiSearch.prepareApplication(entry))
 
-    readonly property var results: searchApplications(query)
+    readonly property var preparedExternalMenuEntries:
+        externalMenuEntries.map(entry => RofiSearch.prepareApplication(entry))
+    readonly property var results: externalMenuMode
+        ? searchExternalMenu(query)
+        : searchApplications(query)
     readonly property var topResult: results.length > 0
         ? (results[Math.min(selectedIndex, results.length - 1)] || results[0])
         : null
+    readonly property var optionResults: {
+        if (!showResults || results.length < 2)
+            return [];
+
+        const options = [];
+        const activeIndex = Math.min(selectedIndex, results.length - 1);
+        const offsets = [-1, 1, 2, 3];
+        for (let i = 0; i < offsets.length && options.length < 4; i++) {
+            const optionIndex = (activeIndex + offsets[i] + results.length) % results.length;
+            const candidate = results[optionIndex];
+            if (optionIndex !== activeIndex && options.indexOf(candidate) === -1)
+                options.push(candidate);
+        }
+        return options;
+    }
+
+    function cancelResultTransition() {
+        resultSwitchAnimation.stop();
+        resultTransitionRunning = false;
+        resultTransitionProgress = 0;
+    }
+
+    function switchSelection(delta) {
+        if (resultTransitionRunning || results.length === 0)
+            return;
+
+        const nextIndex = (selectedIndex + delta + results.length) % results.length;
+        if (nextIndex === selectedIndex)
+            return;
+
+        if (!showResults) {
+            selectedIndex = nextIndex;
+            return;
+        }
+
+        const incomingEntry = results[nextIndex];
+        const options = optionResults;
+        let sourceRow = 0;
+        for (let i = 0; i < options.length; i++) {
+            if (options[i] === incomingEntry || options[i].id === incomingEntry.id) {
+                sourceRow = i;
+                break;
+            }
+        }
+
+        outgoingResultName = displayAppName;
+        resultTransitionStartBlurWidth = launcherShadow.width;
+        incomingResultName = incomingEntry.name;
+        pendingSelectedIndex = nextIndex;
+        resultTransitionSourceRow = sourceRow;
+        resultTransitionDirection = delta;
+        resultTransitionProgress = 0;
+        resultTransitionRunning = true;
+        resultSwitchAnimation.restart();
+    }
+
+    function finishResultTransition() {
+        if (!resultTransitionRunning)
+            return;
+
+        selectedIndex = pendingSelectedIndex;
+        displayAppName = incomingResultName;
+        appNameContainer.setTextImmediately(incomingResultName);
+        resultTransitionRunning = false;
+        resultTransitionProgress = 0;
+    }
+
+    function loadExternalMenuEntries() {
+        if (!externalMenuMode || !externalMenuInputFile.loaded)
+            return;
+
+        const lines = externalMenuInputFile.text().split(/\r?\n/);
+        if (lines.length > 0 && lines[lines.length - 1] === "")
+            lines.pop();
+
+        externalMenuEntries = lines.map((line, index) => ({
+            id: "external-menu-" + index,
+            name: line,
+            value: line,
+            genericName: "",
+            execString: "",
+            categories: [],
+            keywords: [],
+            comment: ""
+        }));
+
+        if (externalMenuEntries.length === 0) {
+            finishExternalMenu("cancelled", "");
+            return;
+        }
+
+        open();
+        showResults = true;
+        resultsShowDelay.stop();
+        selectedIndex = 0;
+        updateDisplayAppName();
+    }
+
+    function showExternalMenu(inputPath, resultPath) {
+        if (externalMenuMode)
+            finishExternalMenu("cancelled", "");
+
+        externalMenuEntries = [];
+        externalMenuResultPath = resultPath;
+        externalMenuMode = true;
+        externalMenuCompleting = false;
+        externalMenuInputPath = inputPath;
+    }
+
+    function finishExternalMenu(status, value) {
+        if (!externalMenuMode)
+            return;
+
+        externalMenuCompleting = true;
+        externalMenuResultFile.setText(status + "\n" + (status === "selected" ? value + "\n" : ""));
+        close();
+        externalMenuMode = false;
+        externalMenuEntries = [];
+        externalMenuCompleting = false;
+    }
 
     function updateDisplayAppName() {
         if (query.trim().length === 0) {
@@ -135,6 +309,17 @@ ShellRoot {
     }
 
     onQueryChanged: {
+        if (resultTransitionRunning)
+            cancelResultTransition();
+
+        if (externalMenuMode) {
+            showResults = true;
+            resultsShowDelay.stop();
+            selectedIndex = 0;
+            updateDisplayAppName();
+            return;
+        }
+
         if (query.trim().length === 0) {
             resultsShowDelay.stop();
             showResults = false;
@@ -150,6 +335,8 @@ ShellRoot {
     }
 
     onSelectedIndexChanged: {
+        if (resultTransitionRunning)
+            return;
         if (selectedIndex === 0)
             return;
         showResults = true;
@@ -173,7 +360,22 @@ ShellRoot {
         });
     }
 
+    function searchExternalMenu(text) {
+        if (text.trim().length === 0)
+            return externalMenuEntries;
+
+        return RofiSearch.search(text, preparedExternalMenuEntries, {
+            matchingMethod: Quickshell.env("WAVE_LAUNCHER_MATCHING") || "normal",
+            normalizeMatch: Quickshell.env("WAVE_LAUNCHER_NORMALIZE") === "true",
+            sort: false,
+            matchFieldsSpec: "name",
+            useDrunHistory: false,
+            preferNameMatch: true
+        });
+    }
+
     function open() {
+        cancelResultTransition();
         hideDelay.stop();
         physicsLayer.fallingOffScreen = false;
         physicsLayer.resetAllLetters();
@@ -190,6 +392,12 @@ ShellRoot {
     }
 
     function close() {
+        if (externalMenuMode && !externalMenuCompleting) {
+            finishExternalMenu("cancelled", "");
+            return;
+        }
+
+        cancelResultTransition();
         vignetteFadeInDelay.stop();
         vignetteOpen = false;
         launcherOpen = false;
@@ -206,7 +414,18 @@ ShellRoot {
     }
 
     function launchSelected() {
+        if (resultTransitionRunning) {
+            resultSwitchAnimation.stop();
+            finishResultTransition();
+        }
+
         const entry = topResult;
+        if (externalMenuMode) {
+            if (entry)
+                finishExternalMenu("selected", entry.value);
+            return;
+        }
+
         if (entry) {
             recordDrunLaunch(entry);
             close();
@@ -229,6 +448,10 @@ ShellRoot {
         function toggle(): void { root.toggle(); }
         function open(): void { root.open(); }
         function close(): void { root.close(); }
+        function showMenu(inputPath: string, resultPath: string): void {
+            root.showExternalMenu(inputPath, resultPath);
+        }
+        function accept(): void { root.launchSelected(); }
     }
 
     Timer {
@@ -300,7 +523,17 @@ ShellRoot {
             readonly property real blobBaseWidth: 120
             readonly property real blobHeight: 110
             readonly property real blobPadding: 88
-            readonly property real targetWidth: Math.max(blobBaseWidth, centerMenu.width + blobPadding)
+            readonly property real transitionTextScale:
+                Math.max(root.smallResultScale, incomingTransitionLabel.fontSize / 44)
+            readonly property real transitionFinalWidth: Math.max(
+                blobBaseWidth,
+                incomingTransitionRow.width / transitionTextScale + blobPadding
+            )
+            readonly property real targetWidth: root.resultTransitionRunning
+                ? root.resultTransitionStartBlurWidth
+                  + (transitionFinalWidth - root.resultTransitionStartBlurWidth)
+                    * root.resultTransitionProgress
+                : Math.max(blobBaseWidth, centerMenu.width + blobPadding)
 
             Behavior on opacity {
                 NumberAnimation {
@@ -310,6 +543,7 @@ ShellRoot {
             }
 
             RectangularShadow {
+                id: launcherShadow
                 anchors.centerIn: parent
                 width: vignette.targetWidth
                 height: vignette.blobHeight
@@ -321,6 +555,7 @@ ShellRoot {
                 color: root.colorWithAlpha(root.bgHex, 0.72)
 
                 Behavior on width {
+                    enabled: !root.resultTransitionRunning
                     NumberAnimation {
                         duration: 260
                         easing.type: Easing.OutCubic
@@ -363,14 +598,10 @@ ShellRoot {
                         physicsLayer.dropLastLetter();
                     }
                 } else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab) {
-                    if (root.results.length > 0) {
-                        root.selectedIndex = (root.selectedIndex + 1) % root.results.length;
-                    }
+                    root.switchSelection(1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Up) {
-                    if (root.results.length > 0) {
-                        root.selectedIndex = (root.selectedIndex - 1 + root.results.length) % root.results.length;
-                    }
+                    root.switchSelection(-1);
                     event.accepted = true;
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     root.launchSelected();
@@ -714,12 +945,26 @@ ShellRoot {
             Item {
                 id: appNameContainer
                 anchors.centerIn: parent
+                anchors.verticalCenterOffset: root.resultTransitionRunning
+                    ? root.optionVerticalOffset(root.resultTransitionDirection > 0 ? 0 : 1)
+                      * root.resultTransitionProgress
+                    : 0
                 width: waveRow.width
                 height: 64
+                transformOrigin: Item.Center
+                opacity: root.resultTransitionRunning
+                         ? 1 - 0.62 * root.resultTransitionProgress : 1
+                scale: root.resultTransitionRunning
+                       ? 1 - (1 - root.smallResultScale) * root.resultTransitionProgress : 1
 
                 readonly property string scrambleCharset: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
                 readonly property int scrambleTickMs: 20
                 readonly property int revealStaggerMs: 24
+                readonly property real transitionWaveIndexOffset:
+                    root.resultTransitionRunning
+                    ? (root.incomingResultName.length - root.outgoingResultName.length)
+                      / 2 * root.resultTransitionProgress
+                    : 0
 
                 property int scrambleClock: 0
                 property string pendingScrambleTarget: ""
@@ -850,6 +1095,28 @@ ShellRoot {
                     retractTargetLen = 0;
                     retractingTail = false;
                     charScrambleModel.clear();
+                }
+
+                function setTextImmediately(target) {
+                    scrambleScheduleTimer.stop();
+                    scrambleTimer.stop();
+                    pendingScrambleTarget = target;
+                    committedScrambleTarget = target;
+                    pendingRevealIndex = -1;
+                    pendingRetractIndex = -1;
+                    retractTargetLen = target.length;
+                    retractingTail = false;
+                    scrambleClock = Date.now();
+                    charScrambleModel.clear();
+
+                    for (let i = 0; i < target.length; i++) {
+                        const ch = target.charAt(i);
+                        charScrambleModel.append({
+                            displayChar: ch,
+                            targetChar: ch,
+                            settleAt: 0
+                        });
+                    }
                 }
 
                 function quitEase(t) {
@@ -1134,7 +1401,9 @@ ShellRoot {
                             readonly property bool isScrambling: charDelegate.settleAt > appNameContainer.scrambleClock
                                     || appNameContainer.quitAnimating
 
-                            readonly property real yOffset: Math.sin(root.wavePhase + charDelegate.index * 0.45) * 10
+                            readonly property real yOffset: root.waveOffset(
+                                charDelegate.index + appNameContainer.transitionWaveIndexOffset
+                            )
                             readonly property real centerIdx: (charScrambleModel.count - 1) / 2
                             readonly property real distFromCenter: Math.abs(charDelegate.index - centerIdx)
                             readonly property int quitStaggerMs: (charDelegate.centerIdx - charDelegate.distFromCenter) * appNameContainer.quitStaggerStepMs
@@ -1186,6 +1455,167 @@ ShellRoot {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.launchSelected()
+                }
+            }
+
+            Item {
+                id: optionList
+                anchors.centerIn: parent
+                width: Math.max(waveRow.width, 220)
+                height: parent.height
+                readonly property real rowHeight: 28
+                opacity: root.launcherOpen && root.showResults ? 1 : 0
+                visible: opacity > 0.001 && root.optionResults.length > 0
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 140
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
+                Repeater {
+                    model: root.optionResults
+
+                    Item {
+                        id: optionDelegate
+                        required property var modelData
+                        required property int index
+                        readonly property string optionName: modelData.name || ""
+                        readonly property real centeredWaveIndexOffset:
+                            (root.displayAppName.length - optionName.length) / 2
+
+                        width: optionList.width
+                        height: optionList.rowHeight
+                        anchors.horizontalCenter: optionList.horizontalCenter
+                        anchors.verticalCenter: optionList.verticalCenter
+                        anchors.verticalCenterOffset: root.optionVerticalOffset(index)
+                        opacity: root.resultTransitionRunning
+                                 && (index === root.resultTransitionSourceRow
+                                     || index === (root.resultTransitionDirection > 0 ? 0 : 1))
+                                 ? 0 : 0.38
+
+                        Row {
+                            anchors.centerIn: parent
+                            spacing: 0
+
+                            Repeater {
+                                model: optionDelegate.optionName.length
+
+                                Item {
+                                    id: optionCharDelegate
+                                    required property int index
+
+                                    readonly property string optionChar: optionDelegate.optionName.charAt(index)
+                                    readonly property real yOffset: root.waveOffset(
+                                        index + optionDelegate.centeredWaveIndexOffset,
+                                        root.smallWaveAmplitude
+                                    )
+
+                                    width: optionChar === " "
+                                           ? 20 * root.smallResultScale
+                                           : (optionCharForeground.paintedWidth || 8)
+                                    height: optionList.rowHeight
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        anchors.horizontalCenterOffset: 4 * root.smallResultScale
+                                        anchors.verticalCenterOffset: optionCharDelegate.yOffset
+                                            + 2 * root.smallResultScale
+                                        text: optionCharDelegate.optionChar
+                                        color: Qt.darker(root.accentHex, 3.0)
+                                        font.family: root.fontFamily
+                                        font.pixelSize: 16
+                                        font.bold: true
+                                    }
+
+                                    Text {
+                                        id: optionCharForeground
+                                        anchors.centerIn: parent
+                                        anchors.verticalCenterOffset: optionCharDelegate.yOffset
+                                        text: optionCharDelegate.optionChar
+                                        color: root.fgHex
+                                        font.family: root.fontFamily
+                                        font.pixelSize: 16
+                                        font.bold: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item {
+                id: incomingTransitionLabel
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset:
+                    root.optionVerticalOffset(root.resultTransitionSourceRow)
+                    * (1 - root.resultTransitionProgress)
+                width: incomingTransitionRow.width
+                height: 64
+                z: 20
+                visible: root.resultTransitionRunning
+                opacity: 0.38 + 0.62 * root.resultTransitionProgress
+
+                readonly property real fontSize: 16 + 28 * root.resultTransitionProgress
+                readonly property real waveAmplitude: root.smallWaveAmplitude
+                    + (10 - root.smallWaveAmplitude) * root.resultTransitionProgress
+                readonly property real centeredWaveIndexOffset:
+                    (root.outgoingResultName.length - root.incomingResultName.length)
+                    / 2 * (1 - root.resultTransitionProgress)
+
+                Row {
+                    id: incomingTransitionRow
+                    anchors.centerIn: parent
+                    spacing: 0
+
+                    Repeater {
+                        model: root.incomingResultName.length
+
+                        Item {
+                            id: incomingCharDelegate
+                            required property int index
+
+                            readonly property string transitionChar: root.incomingResultName.charAt(index)
+                            readonly property real yOffset: root.waveOffset(
+                                index + incomingTransitionLabel.centeredWaveIndexOffset,
+                                incomingTransitionLabel.waveAmplitude
+                            )
+
+                            width: transitionChar === " "
+                                   ? 20 * (root.smallResultScale
+                                       + (1 - root.smallResultScale) * root.resultTransitionProgress)
+                                   : (incomingCharForeground.paintedWidth || 8)
+                            height: 64
+
+                            Text {
+                                anchors.centerIn: parent
+                                anchors.horizontalCenterOffset: 4 * (root.smallResultScale
+                                    + (1 - root.smallResultScale) * root.resultTransitionProgress)
+                                anchors.verticalCenterOffset: incomingCharDelegate.yOffset
+                                    + 2 * (root.smallResultScale
+                                        + (1 - root.smallResultScale) * root.resultTransitionProgress)
+                                text: incomingCharDelegate.transitionChar
+                                color: Qt.darker(root.accentHex, 3.0)
+                                font.family: root.fontFamily
+                                font.pixelSize: incomingTransitionLabel.fontSize
+                                font.bold: true
+                            }
+
+                            Text {
+                                id: incomingCharForeground
+                                anchors.centerIn: parent
+                                anchors.verticalCenterOffset: incomingCharDelegate.yOffset
+                                text: incomingCharDelegate.transitionChar
+                                color: root.fgHex
+                                font.family: root.fontFamily
+                                font.pixelSize: incomingTransitionLabel.fontSize
+                                font.bold: true
+                            }
+                        }
+                    }
                 }
             }
         }

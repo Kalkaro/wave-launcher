@@ -58,31 +58,10 @@
             cp -- LICENSE "$launcherRoot/"
             cp -- licenses/* "$launcherRoot/licenses/"
 
-            cat > "$out/bin/wave-launcher" <<EOF
-            #!${pkgs.bash}/bin/bash
-            set -euo pipefail
-
-            launcher_dir="$launcherRoot"
-            qs="${qs}"
-
-            if "\$qs" -p "\$launcher_dir" ipc call launcher toggle >/dev/null 2>&1; then
-                exit 0
-            fi
-
-            "\$qs" -p "\$launcher_dir" --daemonize >/dev/null 2>&1
-
-            attempt=0
-            while [ "\$attempt" -lt 50 ]; do
-                if "\$qs" -p "\$launcher_dir" ipc call launcher open >/dev/null 2>&1; then
-                    exit 0
-                fi
-                attempt=\$((attempt + 1))
-                sleep 0.02
-            done
-
-            printf '%s\\n' "launcher: Quickshell started, but its IPC endpoint did not become ready" >&2
-            exit 1
-            EOF
+            cp -- launcher.sh "$out/bin/wave-launcher"
+            substituteInPlace "$out/bin/wave-launcher" \
+              --replace-fail 'launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)' "launcher_dir=\"$launcherRoot\"" \
+              --replace-fail 'qs_bin=''${WAVE_LAUNCHER_QS:-qs}' 'qs_bin="${qs}"'
 
             chmod +x "$out/bin/wave-launcher"
 
