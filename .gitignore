@@ -1,0 +1,21 @@
+# Quickshell / QML tooling
+.qmlls.ini
+
+# Nix build outputs
+result
+result-*
+
+# direnv
+.direnv/
+.envrc.local
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Editor / OS
+*.swp
+*~
+.DS_Store
