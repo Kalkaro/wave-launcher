@@ -31,11 +31,11 @@ in
       }
     ];
 
-    home.packages = [ cfg.package ];
+    home.packages = [ cfg.package ] ++ cfg.fontPackages;
 
     home.sessionVariables = waveLauncherSessionVariables (waveLauncherResolvedCfg cfg config);
 
-    fonts.fontconfig.packages = lib.mkIf (cfg.fontPackages != [ ]) cfg.fontPackages;
+    fonts.fontconfig.enable = lib.mkIf (cfg.fontPackages != [ ]) (lib.mkDefault true);
 
     wayland.windowManager.hyprland.settings = lib.mkIf (cfg.hyprlandKeybind != null) {
       bind = lib.mkAfter [

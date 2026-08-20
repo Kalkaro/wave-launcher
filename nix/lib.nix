@@ -31,6 +31,12 @@ lib: rec {
         '';
       };
 
+      wave.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Whether to animate launcher text with a wave effect.";
+      };
+
       namespace = lib.mkOption {
         type = lib.types.str;
         default = "wave-launcher";
@@ -183,6 +189,7 @@ lib: rec {
       boolStr = b: if b then "true" else "false";
       base = {
         WAVE_LAUNCHER_FONT = cfg.font;
+        WAVE_LAUNCHER_WAVE_ENABLED = boolStr cfg.wave.enable;
         WAVE_LAUNCHER_NAMESPACE = cfg.namespace;
         HAZE_LAUNCHER_BG = colors.background;
         HAZE_LAUNCHER_FG = colors.foreground;

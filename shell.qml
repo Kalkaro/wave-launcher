@@ -19,6 +19,7 @@ ShellRoot {
                                            || "wave-launcher"
     readonly property string fontFamily: Quickshell.env("WAVE_LAUNCHER_FONT")
                                         || "BigBlueTermPlus Nerd Font"
+    readonly property bool waveEnabled: Quickshell.env("WAVE_LAUNCHER_WAVE_ENABLED") !== "false"
 
     function colorWithAlpha(hex, alpha) {
         let value = hex.startsWith("#") ? hex.slice(1) : hex;
@@ -29,6 +30,8 @@ ShellRoot {
     }
 
     function waveOffset(index, amplitude) {
+        if (!waveEnabled)
+            return 0;
         return Math.sin(wavePhase + index * 0.45)
             * (amplitude === undefined ? 10 : amplitude);
     }
@@ -142,7 +145,7 @@ ShellRoot {
         to: Math.PI * 2
         duration: 1600
         loops: Animation.Infinite
-        running: root.windowShown
+        running: root.windowShown && root.waveEnabled
     }
 
     NumberAnimation {
