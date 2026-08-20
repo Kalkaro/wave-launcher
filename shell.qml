@@ -11,11 +11,10 @@ import "rofi-search.js" as RofiSearch
 ShellRoot {
     id: root
 
-    readonly property string bgHex: Quickshell.env("HAZE_LAUNCHER_BG") || "#100e1c"
-    readonly property string fgHex: Quickshell.env("HAZE_LAUNCHER_FG") || "#f4ebfc"
-    readonly property string accentHex: Quickshell.env("HAZE_LAUNCHER_ACCENT") || "#c084fc"
+    readonly property string bgHex: Quickshell.env("WAVE_LAUNCHER_BG") || "#100e1c"
+    readonly property string fgHex: Quickshell.env("WAVE_LAUNCHER_FG") || "#f4ebfc"
+    readonly property string accentHex: Quickshell.env("WAVE_LAUNCHER_ACCENT") || "#c084fc"
     readonly property string customNamespace: Quickshell.env("WAVE_LAUNCHER_NAMESPACE")
-                                           || Quickshell.env("HAZE_LAUNCHER_NAMESPACE")
                                            || "wave-launcher"
     readonly property string fontFamily: Quickshell.env("WAVE_LAUNCHER_FONT")
                                         || "BigBlueTermPlus Nerd Font"

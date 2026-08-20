@@ -22,16 +22,16 @@ daemon starts:
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `HAZE_LAUNCHER_BG` | Center-vignette background | `#100e1c` |
-| `HAZE_LAUNCHER_FG` | Primary text | `#f4ebfc` |
-| `HAZE_LAUNCHER_ACCENT` | Text shadows | `#c084fc` |
+| `WAVE_LAUNCHER_BG` | Center-vignette background | `#100e1c` |
+| `WAVE_LAUNCHER_FG` | Primary text | `#f4ebfc` |
+| `WAVE_LAUNCHER_ACCENT` | Text shadows | `#c084fc` |
 
 For example:
 
 ```sh
-HAZE_LAUNCHER_BG='#140811' \
-HAZE_LAUNCHER_FG='#e1ccc9' \
-HAZE_LAUNCHER_ACCENT='#140811' \
+WAVE_LAUNCHER_BG='#140811' \
+WAVE_LAUNCHER_FG='#e1ccc9' \
+WAVE_LAUNCHER_ACCENT='#140811' \
 wave-launcher
 ```
 

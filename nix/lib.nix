@@ -198,9 +198,9 @@ lib: rec {
         WAVE_LAUNCHER_WAVE_ENABLED = boolStr cfg.wave.enable;
         WAVE_LAUNCHER_SCRAMBLE_ENABLED = boolStr cfg.scramble.enable;
         WAVE_LAUNCHER_NAMESPACE = cfg.namespace;
-        HAZE_LAUNCHER_BG = colors.background;
-        HAZE_LAUNCHER_FG = colors.foreground;
-        HAZE_LAUNCHER_ACCENT = colors.accent;
+        WAVE_LAUNCHER_BG = colors.background;
+        WAVE_LAUNCHER_FG = colors.foreground;
+        WAVE_LAUNCHER_ACCENT = colors.accent;
         WAVE_LAUNCHER_MATCHING = search.matching;
         WAVE_LAUNCHER_NORMALIZE = boolStr search.normalize;
         WAVE_LAUNCHER_SORT = boolStr search.sort;
