@@ -120,6 +120,7 @@ ShellRoot {
     property string displayAppName: ""
     property bool showResults: false
     property bool showOptionResults: false
+    property bool backspaceHeld: false
     property int selectedIndex: 0
     property int appReloadCounter: 0
     property int drunHistoryReloadCounter: 0
@@ -446,8 +447,10 @@ ShellRoot {
         showResults = false;
         showOptionResults = false;
         displayAppName = query.trim();
-        resultsShowDelay.restart();
-        optionResultsShowDelay.restart();
+        if (!backspaceHeld) {
+            resultsShowDelay.restart();
+            optionResultsShowDelay.restart();
+        }
         selectedIndex = 0;
     }
 
@@ -488,6 +491,7 @@ ShellRoot {
         displayAppName = "";
         showResults = false;
         showOptionResults = false;
+        backspaceHeld = false;
         resultsShowDelay.stop();
         optionResultsShowDelay.stop();
         selectedIndex = 0;
@@ -508,6 +512,7 @@ ShellRoot {
         vignetteFadeInDelay.stop();
         vignetteOpen = false;
         launcherOpen = false;
+        backspaceHeld = false;
         if (root.fallLettersEnabled)
             physicsLayer.triggerFallThrough();
         hideDelay.restart();
@@ -724,6 +729,8 @@ ShellRoot {
                     event.accepted = true;
                     root.close();
                 } else if (event.key === Qt.Key_Backspace) {
+                    if (!event.isAutoRepeat)
+                        root.backspaceHeld = true;
                     if (root.fallLettersEnabled && hiddenInput.text.length === 0) {
                         physicsLayer.dropLastLetter();
                     }
@@ -739,6 +746,17 @@ ShellRoot {
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     root.launchSelected();
                     event.accepted = true;
+                }
+            }
+
+            Keys.onReleased: event => {
+                if (event.key !== Qt.Key_Backspace || event.isAutoRepeat)
+                    return;
+
+                root.backspaceHeld = false;
+                if (!root.externalMenuMode && root.query.trim().length > 0) {
+                    resultsShowDelay.restart();
+                    optionResultsShowDelay.restart();
                 }
             }
         }
