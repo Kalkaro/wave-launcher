@@ -1172,6 +1172,10 @@ ShellRoot {
                     if (now < nextRetractAt)
                         return;
 
+                    pendingRetractIndex = Math.min(pendingRetractIndex, charScrambleModel.count - 1);
+                    if (!hasPendingRetract())
+                        return;
+
                     const slot = charScrambleModel.get(pendingRetractIndex);
                     if (slot.targetChar !== "") {
                         charScrambleModel.setProperty(pendingRetractIndex, "targetChar", "");
