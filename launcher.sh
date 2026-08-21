@@ -13,7 +13,31 @@ if [ "${1:-}" = "--fall" ]; then
     shift
 fi
 
+cleanup_stale_launchers() {
+    current_config=$launcher_dir/shell.qml
+    set --
+
+    for proc_dir in /proc/[0-9]*; do
+        [ -r "$proc_dir/cmdline" ] || continue
+
+        config_dir=$(
+            tr '\0' '\n' <"$proc_dir/cmdline" 2>/dev/null \
+                | sed -n '/^-p$/{n;p;q;}'
+        ) || config_dir=""
+
+        case "$config_dir" in
+            /nix/store/*-wave-launcher-*/share/wave-launcher)
+                [ "$config_dir/shell.qml" = "$current_config" ] && continue
+                set -- "$@" "${proc_dir##*/}"
+                ;;
+        esac
+    done
+
+    [ "$#" -eq 0 ] || kill "$@" 2>/dev/null || true
+}
+
 start_launcher() {
+    cleanup_stale_launchers
     "$qs_bin" -p "$launcher_dir" --daemonize >/dev/null 2>&1
 }
 
