@@ -808,8 +808,8 @@ ShellRoot {
                     // 3D Shadow layers (darker shade shifted horizontally)
                     Text {
                         anchors.centerIn: parent
-                        anchors.horizontalCenterOffset: 6
-                        anchors.verticalCenterOffset: 2
+                        anchors.horizontalCenterOffset: 9
+                        anchors.verticalCenterOffset: 3
                         text: letterItem.letter
                         color: Qt.darker(root.accentHex, 3.0)
                         font.family: root.fontFamily
@@ -819,8 +819,8 @@ ShellRoot {
 
                     Text {
                         anchors.centerIn: parent
-                        anchors.horizontalCenterOffset: 3
-                        anchors.verticalCenterOffset: 1
+                        anchors.horizontalCenterOffset: 5
+                        anchors.verticalCenterOffset: 2
                         text: letterItem.letter
                         color: Qt.darker(root.accentHex, 2.0)
                         font.family: root.fontFamily
@@ -1581,8 +1581,8 @@ ShellRoot {
                             // 3D Shadow layer (wavy + offset)
                             Text {
                                 anchors.centerIn: parent
-                                anchors.horizontalCenterOffset: 4
-                                anchors.verticalCenterOffset: charDelegate.yOffset + 2
+                                anchors.horizontalCenterOffset: 6
+                                anchors.verticalCenterOffset: charDelegate.yOffset + 3
                                 text: charDelegate.displayChar
                                 opacity: charDelegate.isScrambling ? 0.72 : 1
                                 color: Qt.darker(root.accentHex, 3.0)
