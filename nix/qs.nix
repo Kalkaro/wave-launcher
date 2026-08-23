@@ -15,7 +15,6 @@
 
   programs.wave-launcher = {
     enable = lib.mkDefault true;
-    stylix.enable = lib.mkDefault true;
     fontPackages = lib.mkDefault [ pkgs.nerd-fonts.bigblue-terminal ];
     hyprlandKeybind = lib.mkDefault "SUPER, SPACE";
   };

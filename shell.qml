@@ -811,7 +811,7 @@ ShellRoot {
                         anchors.horizontalCenterOffset: 9
                         anchors.verticalCenterOffset: 3
                         text: letterItem.letter
-                        color: Qt.darker(root.accentHex, 3.0)
+                        color: root.accentHex
                         font.family: root.fontFamily
                         font.pixelSize: 128
                         font.bold: true
@@ -822,7 +822,7 @@ ShellRoot {
                         anchors.horizontalCenterOffset: 5
                         anchors.verticalCenterOffset: 2
                         text: letterItem.letter
-                        color: Qt.darker(root.accentHex, 2.0)
+                        color: root.accentHex
                         font.family: root.fontFamily
                         font.pixelSize: 128
                         font.bold: true
@@ -1585,7 +1585,7 @@ ShellRoot {
                                 anchors.verticalCenterOffset: charDelegate.yOffset + 3
                                 text: charDelegate.displayChar
                                 opacity: charDelegate.isScrambling ? 0.72 : 1
-                                color: Qt.darker(root.accentHex, 3.0)
+                                color: root.accentHex
                                 font.family: root.fontFamily
                                 font.pixelSize: 44
                                 font.bold: true
@@ -1679,7 +1679,7 @@ ShellRoot {
                                         anchors.verticalCenterOffset: optionCharDelegate.yOffset
                                             + 2 * root.smallResultScale
                                         text: optionCharDelegate.optionChar
-                                        color: Qt.darker(root.accentHex, 3.0)
+                                        color: root.accentHex
                                         font.family: root.fontFamily
                                         font.pixelSize: 16
                                         font.bold: true
@@ -1754,7 +1754,7 @@ ShellRoot {
                                     + 2 * (root.smallResultScale
                                         + (1 - root.smallResultScale) * root.resultTransitionProgress)
                                 text: incomingCharDelegate.transitionChar
-                                color: Qt.darker(root.accentHex, 3.0)
+                                color: root.accentHex
                                 font.family: root.fontFamily
                                 font.pixelSize: incomingTransitionLabel.fontSize
                                 font.bold: true
