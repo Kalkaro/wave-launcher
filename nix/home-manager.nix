@@ -39,6 +39,24 @@ in
 
     fonts.fontconfig.enable = lib.mkIf (cfg.fontPackages != [ ]) (lib.mkDefault true);
 
+    systemd.user.services.wave-launcher = lib.mkIf cfg.service.enable {
+      Unit = {
+        Description = "Wave Launcher (Quickshell application launcher)";
+        Documentation = "https://github.com/Kalkaro/wave-launcher";
+        PartOf = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+      };
+
+      Service = {
+        ExecStart = "${lib.getExe cfg.package} --daemon";
+        Restart = "on-failure";
+        RestartSec = 1;
+        Slice = "session.slice";
+      };
+
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
+
     wayland.windowManager.hyprland.settings = lib.mkIf (cfg.hyprlandKeybind != null) {
       bind = lib.mkAfter [
         "${cfg.hyprlandKeybind}, exec, ${lib.getExe cfg.package}"

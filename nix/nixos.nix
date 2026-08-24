@@ -32,5 +32,20 @@ in
       waveLauncherConfig (waveLauncherResolvedCfg cfg config)
     );
     fonts.packages = cfg.fontPackages;
+
+    systemd.user.services.wave-launcher = lib.mkIf cfg.service.enable {
+      description = "Wave Launcher (Quickshell application launcher)";
+      documentation = [ "https://github.com/Kalkaro/wave-launcher" ];
+      partOf = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+      wantedBy = [ "graphical-session.target" ];
+
+      serviceConfig = {
+        ExecStart = "${lib.getExe cfg.package} --daemon";
+        Restart = "on-failure";
+        RestartSec = 1;
+        Slice = "session.slice";
+      };
+    };
   };
 }

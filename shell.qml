@@ -90,6 +90,23 @@ ShellRoot {
         return 60 + (optionIndex - 1) * 30;
     }
 
+    // Result offset (relative to the selected entry) currently shown by an option row.
+    function optionResultOffset(optionIndex) {
+        return optionIndex === 0 ? -1 : optionIndex;
+    }
+
+    // Row an option will occupy once a switch by `delta` commits, or -1 when it
+    // leaves the visible window (it is either consumed by the center label or
+    // scrolled out).
+    function optionTargetRow(optionIndex, delta) {
+        const nextOffset = optionResultOffset(optionIndex) - delta;
+        if (nextOffset === -1)
+            return 0;
+        if (nextOffset >= 1 && nextOffset <= 3)
+            return nextOffset;
+        return -1;
+    }
+
     function entryDisplayName(entry) {
         if (!entry)
             return "";
@@ -108,8 +125,36 @@ ShellRoot {
         return characters.slice(0, maxCharacters - 1).join("") + "…";
     }
 
+    // Special effects are rare flourishes rolled once per launch when the
+    // launcher is opened with --special. Adding a new effect means listing its
+    // name here and keying the effect's own state off specialEffectActive().
+    readonly property var specialEffects: ["fall"]
+    readonly property real specialEffectChance: {
+        const configured = parseFloat(configValue("specialEffectChance", 0.01));
+        if (isNaN(configured) || configured < 0)
+            return 0.01;
+        return Math.min(1, configured);
+    }
+
+    property bool commandSpecialEnabled: false
+    property string activeSpecialEffect: ""
+
+    function rollSpecialEffect() {
+        activeSpecialEffect = "";
+        if (!commandSpecialEnabled || specialEffects.length === 0)
+            return;
+        if (Math.random() >= specialEffectChance)
+            return;
+        activeSpecialEffect = specialEffects[Math.floor(Math.random() * specialEffects.length)];
+    }
+
+    function specialEffectActive(name) {
+        return activeSpecialEffect === name;
+    }
+
     property bool commandFallEnabled: false
     readonly property bool fallLettersEnabled: commandFallEnabled
+                                               || specialEffectActive("fall")
                                                || configValue("fallLettersEnabled", false) === true
 
     property bool launcherOpen: false
@@ -485,6 +530,7 @@ ShellRoot {
     function open() {
         cancelResultTransition();
         hideDelay.stop();
+        rollSpecialEffect();
         physicsLayer.fallingOffScreen = false;
         physicsLayer.resetAllLetters();
         query = "";
@@ -559,18 +605,32 @@ ShellRoot {
 
         function toggle(): void {
             root.commandFallEnabled = false;
+            root.commandSpecialEnabled = false;
             root.toggle();
         }
         function toggleFall(): void {
             root.commandFallEnabled = true;
+            root.commandSpecialEnabled = false;
+            root.toggle();
+        }
+        function toggleSpecial(): void {
+            root.commandFallEnabled = false;
+            root.commandSpecialEnabled = true;
             root.toggle();
         }
         function open(): void {
             root.commandFallEnabled = false;
+            root.commandSpecialEnabled = false;
             root.open();
         }
         function openFall(): void {
             root.commandFallEnabled = true;
+            root.commandSpecialEnabled = false;
+            root.open();
+        }
+        function openSpecial(): void {
+            root.commandFallEnabled = false;
+            root.commandSpecialEnabled = true;
             root.open();
         }
         function close(): void { root.close(); }
@@ -612,6 +672,7 @@ ShellRoot {
                 root.selectedIndex = 0;
                 physicsLayer.resetAllLetters();
                 physicsLayer.fallingOffScreen = false;
+                root.activeSpecialEffect = "";
             }
         }
     }
@@ -1641,15 +1702,59 @@ ShellRoot {
                         readonly property real centeredWaveIndexOffset:
                             (root.displayAppName.length - optionName.length) / 2
 
+                        // Row the option slides to while a switch animates; -1 when it
+                        // scrolls out of the visible window.
+                        readonly property int transitionTargetRow:
+                            root.optionTargetRow(index, root.resultTransitionDirection)
+                        readonly property bool consumedByCenter:
+                            index === root.resultTransitionSourceRow
+                        readonly property real baseOffset: root.optionVerticalOffset(index)
+                        readonly property real transitionOffset: transitionTargetRow < 0
+                            ? baseOffset + (root.resultTransitionDirection > 0
+                                ? -optionList.rowHeight : optionList.rowHeight)
+                            : root.optionVerticalOffset(transitionTargetRow)
+                        // The row that receives a freshly scrolled-in entry once the
+                        // switch commits; it fades in instead of popping.
+                        readonly property bool isSpawnRow:
+                            index === (root.resultTransitionDirection > 0 ? 3 : 0)
+                        property real spawnProgress: 1
+
                         width: optionList.width
                         height: optionList.rowHeight
                         anchors.horizontalCenter: optionList.horizontalCenter
                         anchors.verticalCenter: optionList.verticalCenter
-                        anchors.verticalCenterOffset: root.optionVerticalOffset(index)
-                        opacity: root.resultTransitionRunning
-                                 && (index === root.resultTransitionSourceRow
-                                     || index === (root.resultTransitionDirection > 0 ? 0 : 1))
-                                 ? 0 : 0.38
+                        anchors.verticalCenterOffset: root.resultTransitionRunning
+                            ? baseOffset
+                              + (transitionOffset - baseOffset) * root.resultTransitionProgress
+                            : baseOffset
+                        opacity: {
+                            if (root.resultTransitionRunning) {
+                                if (consumedByCenter)
+                                    return 0;
+                                return transitionTargetRow < 0
+                                    ? 0.38 * (1 - root.resultTransitionProgress)
+                                    : 0.38;
+                            }
+                            return 0.38 * spawnProgress;
+                        }
+
+                        NumberAnimation {
+                            id: optionSpawnAnimation
+                            target: optionDelegate
+                            property: "spawnProgress"
+                            from: 0
+                            to: 1
+                            duration: 160
+                            easing.type: Easing.OutCubic
+                        }
+
+                        Connections {
+                            target: root
+                            function onSelectedIndexChanged() {
+                                if (optionDelegate.isSpawnRow && optionDelegate.optionName !== "")
+                                    optionSpawnAnimation.restart();
+                            }
+                        }
 
                         Row {
                             anchors.centerIn: parent

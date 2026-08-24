@@ -49,6 +49,16 @@ lib: rec {
         description = "Whether typed letters fall and interact with launcher surfaces.";
       };
 
+      special.chance = lib.mkOption {
+        type = lib.types.numbers.between 0.0 1.0;
+        default = 0.01;
+        example = 0.05;
+        description = ''
+          Probability that a launch started with `--special` picks one of the
+          special effects at random. Set to 0 to disable them entirely.
+        '';
+      };
+
       background.enable = lib.mkOption {
         type = lib.types.bool;
         default = true;
@@ -180,6 +190,22 @@ lib: rec {
         '';
       };
 
+      service = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = ''
+            Run the launcher as a systemd user service bound to
+            `graphical-session.target`, so it is already resident when the
+            keybind is first pressed instead of paying Quickshell startup
+            on the first launch of the session.
+
+            Set to false to keep the on-demand behaviour, where the first
+            launch starts the daemon itself.
+          '';
+        };
+      };
+
       stylix = {
         enable = lib.mkEnableOption ''
           Use colors from Stylix instead of `programs.wave-launcher.colors`.
@@ -216,6 +242,7 @@ lib: rec {
         waveEnabled = cfg.wave.enable;
         scrambleEnabled = cfg.scramble.enable;
         fallLettersEnabled = cfg.fall.enable;
+        specialEffectChance = cfg.special.chance;
         backgroundEnabled = cfg.background.enable;
         maxCharacters = cfg.maxCharacters;
         namespace = cfg.namespace;

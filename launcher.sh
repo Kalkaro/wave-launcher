@@ -5,11 +5,24 @@ set -eu
 launcher_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 qs_bin=${WAVE_LAUNCHER_QS:-qs}
 
+# Foreground daemon mode, used by the systemd user unit. Stays in the
+# foreground so systemd owns the process, and refuses to start a second
+# instance of the same config.
+if [ "${1:-}" = "--daemon" ]; then
+    shift
+    exec "$qs_bin" -p "$launcher_dir" --no-duplicate "$@"
+fi
+
 toggle_method=toggle
 open_method=open
 if [ "${1:-}" = "--fall" ]; then
     toggle_method=toggleFall
     open_method=openFall
+    shift
+elif [ "${1:-}" = "--special" ]; then
+    # Roll for a rare special effect on this launch.
+    toggle_method=toggleSpecial
+    open_method=openSpecial
     shift
 fi
 

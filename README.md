@@ -21,6 +21,15 @@ Pass `--fall` to enable falling-letter physics for that invocation:
 wave-launcher --fall
 ```
 
+Pass `--special` to roll for a rare special effect instead. Each launch has a
+1% chance (`special.chance`) of picking one of the special effects at random;
+the rest of the time the launcher opens normally. Falling letters are currently
+the only effect in the pool:
+
+```sh
+wave-launcher --special
+```
+
 ## Colors
 
 Wave Launcher reads declarative settings from
@@ -42,6 +51,7 @@ programs.wave-launcher = {
   wave.enable = true;
   scramble.enable = true;
   fall.enable = false;
+  special.chance = 0.01;
   background.enable = true;
   maxCharacters = 25;
 
@@ -65,11 +75,24 @@ Without a Nix module, the equivalent color configuration is:
 
 Set `wave.enable = false` for flat text, `scramble.enable = false` to show
 application names immediately without randomized characters,
-`fall.enable = true` to keep falling-letter physics enabled, or
+`fall.enable = true` to keep falling-letter physics enabled,
+`special.chance` to tune how often `--special` triggers an effect (0 disables
+them), or
 `background.enable = false` to hide the blurred rectangle behind the text. To
 source colors from Stylix instead, set `stylix.enable = true`; this maps Stylix
 `base05` to the primary text and `base00` to both the background and text
 shadows.
+
+## Startup
+
+Both Nix modules install a `wave-launcher` systemd user service bound to
+`graphical-session.target`, so the launcher is already resident when the
+keybind is first pressed rather than paying Quickshell startup on the first
+launch of the session. Set `service.enable = false` for the on-demand
+behaviour, where the first launch starts the daemon itself.
+
+Outside of systemd, `wave-launcher --daemon` runs the launcher in the
+foreground without opening it.
 
 ## Piped input
 
