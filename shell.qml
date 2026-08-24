@@ -185,6 +185,11 @@ ShellRoot {
     property var externalMenuEntries: []
     readonly property real smallResultScale: 16 / 44
     readonly property real smallWaveAmplitude: 10 * smallResultScale
+    // Opacity of the offset (3D) letter shadow on secondary results, relative to
+    // the row itself. The main result carries it at full strength.
+    readonly property real smallShadowOpacity: 0.5
+    readonly property real shadowOffsetX: 6
+    readonly property real shadowOffsetY: 3
 
     FileView {
         id: configFile
@@ -1599,6 +1604,24 @@ ShellRoot {
 
                 Component.onCompleted: scheduleScramble(centerMenu.appNameStr)
 
+                // Blob shadow the label picks up as it shrinks into a secondary row.
+                // Fades in on the same curve the label's text fades to the secondary
+                // opacity, and is shrunk by the container's own scale.
+                RectangularShadow {
+                    visible: root.backgroundEnabled && root.resultTransitionRunning
+                    anchors.centerIn: parent
+                    z: -1
+                    width: Math.max(vignette.blobBaseWidth, waveRow.width + vignette.blobPadding)
+                    height: vignette.blobHeight
+                    radius: height / 2
+                    blur: 88
+                    spread: 8
+                    offset.x: 0
+                    offset.y: 0
+                    opacity: root.resultTransitionProgress
+                    color: root.colorWithAlpha(root.bgHex, 0.72)
+                }
+
                 Row {
                     id: waveRow
                     anchors.centerIn: parent
@@ -1642,10 +1665,15 @@ ShellRoot {
                             // 3D Shadow layer (wavy + offset)
                             Text {
                                 anchors.centerIn: parent
-                                anchors.horizontalCenterOffset: 6
-                                anchors.verticalCenterOffset: charDelegate.yOffset + 3
+                                anchors.horizontalCenterOffset: root.shadowOffsetX
+                                anchors.verticalCenterOffset: charDelegate.yOffset
+                                    + root.shadowOffsetY
                                 text: charDelegate.displayChar
-                                opacity: charDelegate.isScrambling ? 0.72 : 1
+                                opacity: (charDelegate.isScrambling ? 0.72 : 1)
+                                    * (root.resultTransitionRunning
+                                        ? 1 - (1 - root.smallShadowOpacity)
+                                              * root.resultTransitionProgress
+                                        : 1)
                                 color: root.accentHex
                                 font.family: root.fontFamily
                                 font.pixelSize: 44
@@ -1756,7 +1784,24 @@ ShellRoot {
                             }
                         }
 
+                        RectangularShadow {
+                            visible: root.backgroundEnabled && optionDelegate.optionName !== ""
+                            anchors.centerIn: parent
+                            z: -1
+                            width: Math.max(vignette.blobBaseWidth * root.smallResultScale,
+                                            optionRow.width
+                                            + vignette.blobPadding * root.smallResultScale)
+                            height: vignette.blobHeight * root.smallResultScale
+                            radius: height / 2
+                            blur: 88 * root.smallResultScale
+                            spread: 8 * root.smallResultScale
+                            offset.x: 0
+                            offset.y: 0
+                            color: root.colorWithAlpha(root.bgHex, 0.72)
+                        }
+
                         Row {
+                            id: optionRow
                             anchors.centerIn: parent
                             spacing: 0
 
@@ -1780,10 +1825,12 @@ ShellRoot {
 
                                     Text {
                                         anchors.centerIn: parent
-                                        anchors.horizontalCenterOffset: 4 * root.smallResultScale
+                                        anchors.horizontalCenterOffset:
+                                            root.shadowOffsetX * root.smallResultScale
                                         anchors.verticalCenterOffset: optionCharDelegate.yOffset
-                                            + 2 * root.smallResultScale
+                                            + root.shadowOffsetY * root.smallResultScale
                                         text: optionCharDelegate.optionChar
+                                        opacity: root.smallShadowOpacity
                                         color: root.accentHex
                                         font.family: root.fontFamily
                                         font.pixelSize: 16
@@ -1821,6 +1868,10 @@ ShellRoot {
                 opacity: 0.38 + 0.62 * root.resultTransitionProgress
 
                 readonly property real fontSize: 16 + 28 * root.resultTransitionProgress
+                // Scale of the label relative to the full-size main result: runs from
+                // the secondary scale up to 1 over the transition.
+                readonly property real scaleProgress: root.smallResultScale
+                    + (1 - root.smallResultScale) * root.resultTransitionProgress
                 readonly property real waveAmplitude: root.smallWaveAmplitude
                     + (10 - root.smallWaveAmplitude) * root.resultTransitionProgress
                 readonly property real centeredWaveIndexOffset:
@@ -1846,19 +1897,19 @@ ShellRoot {
                             )
 
                             width: transitionChar === " "
-                                   ? 20 * (root.smallResultScale
-                                       + (1 - root.smallResultScale) * root.resultTransitionProgress)
+                                   ? 20 * incomingTransitionLabel.scaleProgress
                                    : (incomingCharForeground.paintedWidth || 8)
                             height: 64
 
                             Text {
                                 anchors.centerIn: parent
-                                anchors.horizontalCenterOffset: 4 * (root.smallResultScale
-                                    + (1 - root.smallResultScale) * root.resultTransitionProgress)
+                                anchors.horizontalCenterOffset: root.shadowOffsetX
+                                    * incomingTransitionLabel.scaleProgress
                                 anchors.verticalCenterOffset: incomingCharDelegate.yOffset
-                                    + 2 * (root.smallResultScale
-                                        + (1 - root.smallResultScale) * root.resultTransitionProgress)
+                                    + root.shadowOffsetY * incomingTransitionLabel.scaleProgress
                                 text: incomingCharDelegate.transitionChar
+                                opacity: root.smallShadowOpacity
+                                    + (1 - root.smallShadowOpacity) * root.resultTransitionProgress
                                 color: root.accentHex
                                 font.family: root.fontFamily
                                 font.pixelSize: incomingTransitionLabel.fontSize
