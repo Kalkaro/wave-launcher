@@ -1931,5 +1931,23 @@ ShellRoot {
                 }
             }
         }
+
+        // Scroll wheel selection without stealing clicks from interactive areas.
+        MouseArea {
+            anchors.fill: parent
+            z: 100
+            acceptedButtons: Qt.NoButton
+            onWheel: wheel => {
+                if (!root.launcherOpen)
+                    return;
+
+                if (wheel.angleDelta.y > 0)
+                    root.switchSelection(-1);
+                else if (wheel.angleDelta.y < 0)
+                    root.switchSelection(1);
+
+                wheel.accepted = true;
+            }
+        }
     }
 }
