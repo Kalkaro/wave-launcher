@@ -31,6 +31,19 @@ function optionValue(options, key, fallback) {
     return options[key];
 }
 
+// Physical key equivalents for the standard Russian and US English layouts.
+function remapRussianKeyboard(text) {
+    var russian = "ёйцукенгшщзхъфывапролджэячсмитьбю";
+    var english = "`qwertyuiop[]asdfghjkl;'zxcvbnm,.";
+    var shiftedEnglish = "~QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>";
+
+    return String(text || "").replace(/[ЁёА-Яа-я]/g, function(ch) {
+        var lower = ch.toLowerCase();
+        var index = russian.indexOf(lower);
+        return (ch === lower ? english : shiftedEnglish).charAt(index);
+    });
+}
+
 function toCodePoints(text) {
     var points = [];
     var str = String(text || "");
@@ -127,17 +140,7 @@ function compileRegex(source, options) {
     }
 }
 
-// helper.c create_regex
-function createRegex(input, options) {
-    var negateChar = optionValue(options, "matchingNegateChar", "-");
-    var invert = 0;
-    var token = String(input || "");
-
-    if (negateChar && negateChar.length > 0 && token.charAt(0) === negateChar) {
-        invert = 1;
-        token = token.slice(1);
-    }
-
+function createMatchRegex(token, options) {
     var method = optionValue(options, "matchingMethod", "normal");
     var normalizeMatch = optionValue(options, "normalizeMatch", false) === true;
     var source = normalizeMatch ? simplifyString(token) : token;
@@ -162,8 +165,24 @@ function createRegex(input, options) {
         break;
     }
 
+    return compileRegex(pattern, options);
+}
+
+// helper.c create_regex, with an additional keyboard-layout match.
+function createRegex(input, options) {
+    var negateChar = optionValue(options, "matchingNegateChar", "-");
+    var invert = 0;
+    var token = String(input || "");
+
+    if (negateChar && negateChar.length > 0 && token.charAt(0) === negateChar) {
+        invert = 1;
+        token = token.slice(1);
+    }
+
+    var remapped = remapRussianKeyboard(token);
     return {
-        regex: compileRegex(pattern, options),
+        regex: createMatchRegex(token, options),
+        layoutRegex: remapped !== token ? createMatchRegex(remapped, options) : null,
         invert: invert
     };
 }
@@ -198,6 +217,10 @@ function helperTokenMatch(token, text, options) {
 
     token.regex.lastIndex = 0;
     match = token.regex.test(haystack);
+    if (!match && token.layoutRegex) {
+        token.layoutRegex.lastIndex = 0;
+        match = token.layoutRegex.test(haystack);
+    }
     if (token.invert)
         match = !match;
 
@@ -665,6 +688,7 @@ function search(query, applications, options) {
     var tokens = createTokens(trimmed, searchOptions);
     if (tokens.length === 0)
         return [];
+    var remappedQuery = remapRussianKeyboard(trimmed);
 
     var useDrunHistory = true;
     if (options && options.useDrunHistory === false)
@@ -682,14 +706,18 @@ function search(query, applications, options) {
             continue;
 
         var sortText = completionName(app);
+        var distance = i;
+        if (searchOptions.sort) {
+            distance = sortDistance(trimmed, sortText, searchOptions);
+            if (remappedQuery !== trimmed)
+                distance = Math.min(distance, sortDistance(remappedQuery, sortText, searchOptions));
+        }
         results.push({
             app: app,
             entry: app.entry,
             index: i,
             fieldRank: matchFieldRank(tokens, app, searchOptions),
-            distance: searchOptions.sort
-                ? sortDistance(trimmed, sortText, searchOptions)
-                : i
+            distance: distance
         });
     }
 
